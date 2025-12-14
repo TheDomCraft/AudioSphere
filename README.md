@@ -1,9 +1,11 @@
 # AudioSphere
 
-AudioSphere is a cross‑platform command‑line tool for working with a custom encrypted audio container format (`.asph`).
+AudioSphere is a cross‑platform, experimental command‑line tool for working with a custom encrypted audio container format (`.asph`), called **ASPH v4**.
 
 The project is implemented in **Java 21**, targets Linux, macOS, and Windows, and uses only standard Java APIs.  
 It is **experimental**, not designed or reviewed for production use, security‑critical scenarios, or long‑term archival.
+
+For full details of the file format, see the [ASPH v4 Specification](docs/specs.md).
 
 ---
 
@@ -17,76 +19,112 @@ It is **experimental**, not designed or reviewed for production use, security‑
 > - Critical audio workflows in production environments  
 
 The intent of this project is to:
-- Explore custom audio container design
-- Demonstrate simple AES + GZip pipelines in Java
-- Provide a small CLI for learning and experimentation
+
+- Explore a **custom audio container format** (ASPH v4).
+- Demonstrate a simple **PCM → container → GZip → AES‑CBC** pipeline in Java.
+- Provide a small CLI for learning, experimentation, and AI‑related tooling.
+
+---
+
+## What is ASPH v4?
+
+ASPH v4 is a **container format for PCM audio**. Conceptually:
+
+- Input is a **WAV** file (PCM audio).
+- Audio is converted to a normalized **PCM_SIGNED, little‑endian** format that mirrors the source, clamped to:
+  - up to **96 kHz** sample rate
+  - up to **24‑bit** samples
+  - up to **2 channels** (mono or stereo)
+- The ASPH payload stores:
+  - Magic: `ASPH`
+  - Version: `0x04`
+  - Sample rate, bit depth, channels
+  - Raw PCM data
+- This payload is:
+  - **GZip‑compressed**, then
+  - **AES‑128 CBC** encrypted (fixed key/IV in this prototype),
+  - and wrapped in a tiny outer header with its own `ASPH` magic and length.
+- Optionally, a **512‑byte metadata block** is appended at the end of the file, containing:
+  - Title
+  - Artist
+  - Album
+
+In other words, ASPH v4 is essentially **PCM in a small custom container**, compressed and encrypted, with basic tagging. It is intentionally simple and easy to parse.
+
+For the full binary layout and rules, see:
+
+- [ASPH v4 Specification](docs/specs.md)
 
 ---
 
 ## Features
 
-- **Encode** standard WAV files into a custom ASPH format:
-  - Normalizes to **PCM 16‑bit stereo, 44.1 kHz**
-  - Packs audio with a small header:
-    - Magic: `ASPH`
-    - Version: `0x01`
-    - Format: sample rate, bit depth, channels
-  - Compresses data with **GZip**
-  - Encrypts with **AES‑128 CBC (PKCS#5/7 padding)** using a fixed key/IV
+- **Encode** WAV files into ASPH v4:
+  - Input: **WAV only** (required, via Java `AudioSystem`).
+  - Output PCM format mirrors the source (clamped to ≤ 96kHz, 24‑bit, 2ch).
+  - Container:
+    - Inner header: `ASPH` magic, version, sample rate, bits, channels.
+    - PCM audio payload.
+  - GZip compression.
+  - AES‑CBC encryption with a fixed key/IV (for experimentation).
 
-- **Decode** ASPH files back into standard WAV:
-  - Verifies magic and version
-  - Decrypts, decompresses, and reconstructs the WAV file from the embedded format info
+- **Decode** ASPH v4 files back into WAV:
+  - Verifies magic and version.
+  - Decrypts, decompresses, and reconstructs a standard WAV using the format stored in ASPH.
 
-- **Play** ASPH audio directly from the CLI:
-  - Uses Java’s `javax.sound.sampled` APIs
-  - Works on Linux, macOS, and Windows (audio devices required)
-  - Interactive playback controls:
-    - `p` — Pause / Resume
-    - `+` — Volume up
-    - `-` — Volume down
-    - `f` — Seek forward 10 seconds
-    - `b` — Seek backward 10 seconds
-    - `q` — Quit / stop playback
-  - Optional loop mode
+- **Play** ASPH v4 audio from the CLI:
+  - Uses `javax.sound.sampled` (`SourceDataLine`) for playback.
+  - Works on Linux, macOS, Windows (audio device required).
+  - Interactive terminal controls:
+    - `p` - Pause / Resume
+    - `+` - Volume up
+    - `-` - Volume down
+    - `f` - Seek forward 10 seconds
+    - `b` - Seek backward 10 seconds
+    - `q` - Quit / stop playback
+  - Optional loop mode.
 
 - **Metadata handling**:
-  - Stores a fixed **512‑byte metadata block at the end of the ASPH file**
-  - Supports:
+  - 512‑byte metadata block at the end of the ASPH file.
+  - Stores UTF‑8:
     - Title
     - Artist
     - Album
-  - Metadata is plain UTF‑8 (not encrypted) and appended after the encoded ASPH payload
+  - Automatically used for “Now Playing” info during playback.
 
 ---
 
 ## Project Structure
 
 ```text
-audiosphere-java/
-├── build.gradle          # Gradle build script (Groovy DSL)
-├── settings.gradle       # Gradle settings
-└── src/
-    └── main/
-        ├── java/
-        │   └── com/
-        │       └── craftmusic/
-        │           └── audiosphere/
-        │               ├── Main.java              # CLI entrypoint
-        │               ├── AudioSphereEncoder.java# Encode/Decode + AES+GZip
-        │               ├── AudioSpherePlayer.java # CLI player with controls
-        │               ├── MetadataHandler.java   # Read/write 512‑byte metadata block
-        │               └── Utilities.java         # AES+GZip helpers
-        └── resources/
+AudioSphere/
+├── app/
+│   ├── build.gradle          # Gradle build (application, Java 21)
+│   └── src/
+│       └── main/
+│           ├── java/
+│           │   └── dev/
+│           │       └── thedomcraft/
+│           │           └── audiosphere/
+│           │               ├── Main.java              # CLI entrypoint
+│           │               ├── AudioSphereEncoder.java# ASPH v4 encode/decode
+│           │               ├── AudioSpherePlayer.java # CLI player with controls
+│           │               ├── MetadataHandler.java   # 512‑byte metadata block
+│           │               └── Utilities.java         # AES+GZip helpers
+│           └── resources/
+├── docs/specs.md           # Formal ASPH v4 format specification
+├── README.md                 # This file
+├── settings.gradle
+└── gradle/ + wrapper files
 ```
 
 ---
 
 ## Requirements
 
-- **Java 21** (JDK 21 or newer)
-- The included **Gradle wrapper** (no separate Gradle install required)
-- An audio output device (for playback)
+- **Java 21** (JDK 21 or newer).
+- The included **Gradle wrapper** (`./gradlew` / `gradlew.bat`).
+- A functioning audio output device (for `play`).
 
 ---
 
@@ -95,23 +133,21 @@ audiosphere-java/
 From the repository root:
 
 ```bash
-./gradlew clean build
+./gradlew :app:clean :app:build
 ```
 
 This produces a runnable JAR in:
 
 ```text
-build/libs/
-  audiosphere-java-<version>.jar
+app/build/libs/
+  app-4.0.0.jar
 ```
 
 Run it with:
 
 ```bash
-java -jar build/libs/audiosphere-java-3.0.0.jar <command> [args...]
+java -jar app/build/libs/app-4.0.0.jar <command> [args...]
 ```
-
-The project uses only standard JDK APIs, so the JAR runs anywhere Java 21 is available.
 
 ---
 
@@ -120,85 +156,93 @@ The project uses only standard JDK APIs, so the JAR runs anywhere Java 21 is ava
 General form:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar <command> [args...]
+java -jar app/build/libs/app-4.0.0.jar <command> [args...]
 ```
 
-Commands are intentionally simple and CLI‑oriented.
+Commands are intentionally minimal and CLI‑oriented.
 
 ### 1. Encode
 
-Encode a WAV file into an ASPH file:
+Encode a WAV file into an ASPH v4 file:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar encode <input.wav> <output.asph>
+java -jar app/build/libs/app-4.0.0.jar encode <input.wav> <output.asph>
 ```
 
-- Input should be a WAV file.
-- Internally, audio is converted (if necessary) to:
-  - 44.1 kHz
-  - 16‑bit samples
-  - 2 channels (stereo)
-- The output `.asph` file contains:
-  - `ASPH` magic
-  - Version byte
-  - Format block (sample rate, bit depth, channels)
-  - Raw PCM audio
-  - GZip compression
-  - AES‑CBC encryption
-  - (Optionally) a trailing 512‑byte metadata block
+- **Input** must be a WAV file.
+- The encoder:
+  - Validates the input is WAV.
+  - Reads its audio format.
+  - Clamps the format to:
+    - 8–96 kHz sample rate,
+    - 8–24 bits per sample (rounded to 8/16/24),
+    - 1–2 channels.
+  - Converts to PCM_SIGNED little‑endian with that format.
+  - Writes the ASPH v4 payload.
+  - Compresses (GZip).
+  - Encrypts (AES‑CBC).
+  - Writes outer header and encrypted data.
 
 Example:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar encode song.wav song.asph
+java -jar app/build/libs/app-4.0.0.jar encode song.wav song.asph
 ```
 
 ### 2. Decode
 
-Decode an ASPH file back into WAV:
+Decode an ASPH v4 file back into WAV:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar decode <input.asph> <output.wav>
+java -jar app/build/libs/app-4.0.0.jar decode <input.asph> <output.wav>
 ```
 
 Example:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar decode song.asph song_decoded.wav
+java -jar app/build/libs/app-4.0.0.jar decode song.asph song_decoded.wav
 ```
 
-The decoded file is standard WAV using the format stored in the ASPH header.
+- The decoder:
+  - Validates outer magic (`ASPH`).
+  - Reads encrypted length and ciphertext.
+  - Decrypts and decompresses.
+  - Parses inner header (`ASPH`, version=4, sampleRate, bits, channels).
+  - Wraps the PCM data in a WAV container using that format.
 
 ### 3. Play
 
-Play an ASPH file on your system’s audio device:
+Play an ASPH v4 file on your system’s audio device:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar play <input.asph> [loop]
+java -jar app/build/libs/app-4.0.0.jar play <input.asph> [loop]
 ```
-
-- If the last argument is `loop` (case‑insensitive), playback restarts automatically at the end.
 
 Examples:
 
 ```bash
 # Play once
-java -jar audiosphere-java-3.0.0.jar play song.asph
+java -jar app/build/libs/app-4.0.0.jar play song.asph
 
 # Play in loop
-java -jar audiosphere-java-3.0.0.jar play song.asph loop
+java -jar app/build/libs/app-4.0.0.jar play song.asph loop
 ```
 
-**Interactive controls during playback (stdin):**
+During playback, controls are read from **stdin** (the terminal):
 
-- `p` — Pause / Resume
-- `+` — Volume up (clamped between 0–100%)
-- `-` — Volume down
-- `f` — Seek forward 10 seconds
-- `b` — Seek backward 10 seconds
-- `q` — Stop playback and exit
+- `p` - Pause / Resume
+- `+` - Volume up (0–100%)
+- `-` - Volume down
+- `f` - Seek forward 10 seconds
+- `b` - Seek backward 10 seconds
+- `q` - Stop playback
 
-You can type these characters into the terminal while audio is playing.
+The player also reads metadata (if present) and displays:
+
+- Title
+- Artist
+- Album
+- Actual PCM format from ASPH: sample rate, bits, channels, version.
 
 > Note: Because this uses standard input, behavior may differ in IDE consoles.  
 > It works best in a normal terminal (e.g. bash, zsh, PowerShell).
@@ -208,52 +252,71 @@ You can type these characters into the terminal while audio is playing.
 Attach or update metadata on an ASPH file:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar metadata <input.asph> <title> <artist> [album]
+java -jar app/build/libs/app-4.0.0.jar metadata <input.asph> <title> <artist> [album]
 ```
 
 Example:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar metadata song.asph "My Title" "My Artist" "My Album"
+java -jar app/build/libs/app-4.0.0.jar metadata song.asph "My Title" "My Artist" "My Album"
 ```
 
-Internally, this writes a fixed 512‑byte metadata block at the end of the file:
+- Writes a **512‑byte block at the end of the file**:
+  - `int32` LE: title length, then UTF‑8 title bytes,
+  - `int32` LE: artist length, then UTF‑8 artist bytes,
+  - `int32` LE: album length, then UTF‑8 album bytes,
+  - Zero padding for the remainder of 512 bytes.
 
-- `int32` little‑endian: title length
-- `title` bytes (UTF‑8)
-- `int32` little‑endian: artist length
-- `artist` bytes (UTF‑8)
-- `int32` little‑endian: album length
-- `album` bytes (UTF‑8)
-- Remaining space in the 512‑byte block is zero‑filled
-
-Metadata is automatically read during playback to display “Now Playing” information.
+See [ASPH v4 Specification](docs/specs.md) §6 for the exact layout.
 
 ### 5. Version
 
-Print build/version info:
+Print version info:
 
 ```bash
-java -jar audiosphere-java-3.0.0.jar version
+java -jar app/build/libs/app-4.0.0.jar version
 ```
+
+---
+
+## ASPH v4 Specification
+
+The exact binary structure of ASPH v4 (headers, fields, ranges, and expected behaviors) is documented in:
+
+- [`docs/specs.md`](docs/specs.md)
+
+This is the reference document for:
+
+- Outer container
+- Inner ASPH payload
+- PCM format semantics
+- Encryption and compression
+- Metadata block
+
+If you plan to implement readers/writers in other languages or tools, start there.
 
 ---
 
 ## Security & Design Notes
 
-- **Encryption**: AES‑128 in CBC mode with a fixed key and IV.
-  - This is **not** a secure DRM system or robust content protection scheme.
-  - It is sufficient for experimenting with encryption pipelines, not for protecting sensitive content.
-- **Compression**: GZip (RFC 1952), chosen for simplicity and streaming support.
+- **Encryption**:
+  - AES‑128 in CBC mode with PKCS#5/7 padding,
+  - Fixed key and IV (hard‑coded) in this proof of concept.
+  - This is **not a secure DRM system** or robust content protection mechanism.
+  - Anyone with access to the repo/spec can decrypt ASPH files.
+
+- **Compression**:
+  - GZip (RFC 1952), chosen for simplicity and streaming support.
+
 - **Format stability**:
-  - The header is self‑contained and versioned.
-  - Fields are intentionally simple (ints + PCM data) to make future experiments easy.
+  - ASPH v4 is versioned and self‑describing, but there are **no stability guarantees**.
+  - Future versions may change header fields or add chunks.
 
-For any real‑world or production scenario, you should:
+For any real‑world or security‑critical use, you should:
 
-- Use properly managed, rotating encryption keys
-- Employ authenticated encryption modes (e.g. AES‑GCM)
-- Design and document a clear, versioned file format with forward/backward compatibility guarantees
+- Use randomized keys/IVs per file or session.
+- Add integrity/authentication (MAC or AEAD like AES‑GCM).
+- Design a versioning strategy with forward/backward compatibility.
 
 ---
 
@@ -261,25 +324,25 @@ For any real‑world or production scenario, you should:
 
 ### Running via Gradle
 
-Instead of using the JAR directly, you can run via Gradle during development:
+During development you can run from the root using Gradle:
 
 ```bash
 # Encode
-./gradlew run --args="encode input.wav output.asph"
+./gradlew :app:run --args="encode input.wav output.asph"
 
 # Decode
-./gradlew run --args="decode input.asph output.wav"
+./gradlew :app:run --args="decode input.asph output.wav"
 
 # Play
-./gradlew run --args="play output.asph"
+./gradlew :app:run --args="play output.asph"
 
 # Metadata
-./gradlew run --args="metadata output.asph \"Title\" \"Artist\" \"Album\""
+./gradlew :app:run --args="metadata output.asph \"Title\" \"Artist\" \"Album\""
 ```
 
 ### Java Version
 
-The project is configured for Java 21 toolchains:
+The project is configured to use **Java 21** via toolchains:
 
 ```groovy
 java {
@@ -289,16 +352,23 @@ java {
 }
 ```
 
-If you need to use a different Java version, adjust the toolchain config and re‑build.
+If you need a different JDK version, update this setting and rebuild.
 
 ---
 
 ## Limitations / Known Issues
 
-- Input audio must be in a format that `AudioSystem` can read (typically PCM WAV and a few others, depending on platform/installed providers).
-- Audio playback and key controls are handled via standard input/output; behavior can vary slightly depending on terminal/console.
-- The AES key and IV are hard‑coded for simplicity. Changing them will break compatibility with existing ASPH files.
-- There is no built‑in integrity check (e.g. MAC) on the encrypted payload; corrupted files may fail during decryption or decompression without a friendly message.
+- **Input**:
+  - Only **WAV** is officially supported in this proof of concept.
+  - Other formats are not handled and will result in errors.
+- **Audio playback**:
+  - Uses `javax.sound.sampled`; device support and mixing behavior may vary by OS/JVM.
+- **Static encryption parameters**:
+  - Fixed key/IV are for experimentation only; do not use ASPH v4 as a secure container.
+- **Integrity**:
+  - No MAC or AEAD; corrupted payloads may fail with cryptic errors on decrypt/decompress.
+
+For more details and edge cases, see [docs/specs.md](docs/specs.md).
 
 ---
 
@@ -306,16 +376,16 @@ If you need to use a different Java version, adjust the toolchain config and re�
 
 Suggestions, bug reports, and pull requests are welcome, especially for:
 
-- Better audio resampling or broader format support
-- Additional metadata fields or tagging systems
-- Improved error handling and diagnostics
-- Optional integrity checks or more robust format validation
+- Better error messages and diagnostics.
+- Extended metadata fields or additional chunks.
+- Optional integrity checks (MAC, checksums).
+- Porting ASPH v4 tooling to other languages.
 
-Please open an issue describing what you’d like to change or add.
+If you plan bigger changes to the format, please reference the [ASPH v4 Specification](docs/specs.md) and propose a version bump or extension strategy.
 
 ---
 
 ## License
 
-This project is provided as‑is, for experimentation and learning.  
-You are responsible for ensuring that any audio you process and distribute complies with the applicable licenses and rights.
+This project is released under the [MIT License](LICENSE).  
+You are responsible for ensuring that any audio content you process and distribute complies with the applicable rights and licenses.

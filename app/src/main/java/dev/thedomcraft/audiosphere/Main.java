@@ -45,8 +45,8 @@ public class Main {
                 MetadataHandler.addMetadata(inputFile, title, artist, album);
             }
             case "version" -> {
-                System.out.println("[AudioSphere] AudioSphere Version 3.0.0.0");
-                System.out.println("[AudioSphere] Build Version 07122025-java");
+                System.out.println("[AudioSphere] AudioSphere Version 4.0.0.0");
+                System.out.println("[AudioSphere] Build Version 14122025");
             }
             default -> {
                 System.out.printf("[AudioSphere] Error: Unknown command '%s'%n", command);

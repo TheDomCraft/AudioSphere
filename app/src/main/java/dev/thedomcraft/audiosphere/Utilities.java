@@ -7,6 +7,11 @@ import java.io.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * General AES + GZip helpers.
+ * Not strictly required by the current encoder (it does inline work),
+ * but kept for parity and possible reuse.
+ */
 public final class Utilities {
 
     private Utilities() {}

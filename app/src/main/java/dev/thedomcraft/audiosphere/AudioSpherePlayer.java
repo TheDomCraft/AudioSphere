@@ -1,7 +1,6 @@
 package dev.thedomcraft.audiosphere;
 
 import javax.sound.sampled.*;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
@@ -52,6 +51,7 @@ public final class AudioSpherePlayer {
             System.out.println("[AudioSphere] Now Playing: " + title);
             System.out.println("[AudioSphere] Artist: " + artist);
             System.out.println("[AudioSphere] Album: " + album);
+            System.out.println("[AudioSphere] Format: " + sampleRate + " Hz, " + bitsPerSample + "-bit, " + channels + " ch, ASPH v" + version);
 
             AtomicBoolean stopPlayback = new AtomicBoolean(false);
             AtomicBoolean paused = new AtomicBoolean(false);
@@ -59,7 +59,9 @@ public final class AudioSpherePlayer {
             AtomicReference<Integer> positionRef = new AtomicReference<>(0); // byte index in audioData
 
             // Key listener on another thread
-            Thread keyThread = new Thread(() -> keyListener(loop, paused, stopPlayback, volumeRef, positionRef, bytesPerSecond, audioData.length));
+            Thread keyThread = new Thread(() ->
+                    keyListener(loop, paused, stopPlayback, volumeRef, positionRef, bytesPerSecond, audioData.length)
+            );
             keyThread.setDaemon(true);
             keyThread.start();
 
@@ -118,14 +120,13 @@ public final class AudioSpherePlayer {
                         if (volumeControl != null) {
                             float requested = volumeRef.get();
                             requested = Math.max(0.0f, Math.min(1.0f, requested));
-                            // Map 0.0..1.0 to gain dB range
                             float min = volumeControl.getMinimum();
                             float max = volumeControl.getMaximum();
                             float dB = min + (max - min) * requested;
                             volumeControl.setValue(dB);
                         }
 
-                        // Progress display every ~500ms
+                        // Progress display
                         long now = System.currentTimeMillis();
                         long elapsedMillis = now - startTime;
                         long remainingMillis = Math.max(0, totalMillis - elapsedMillis);
@@ -155,7 +156,6 @@ public final class AudioSpherePlayer {
             int totalBytes
     ) {
         try {
-            // Simple stdin-based controls – one character per command
             while (!stopPlayback.get()) {
                 int ch = System.in.read();
                 if (ch == -1) break;
@@ -179,7 +179,7 @@ public final class AudioSpherePlayer {
                         System.out.printf("%n[AudioSphere] Volume: %.0f%%%n", v * 100);
                     }
                     case 'f', 'F' -> {
-                        int delta = (int) (bytesPerSecond * 10); // 10 seconds
+                        int delta = (int) (bytesPerSecond * 10); // 10s
                         int newPos = Math.min(totalBytes, positionRef.get() + delta);
                         positionRef.set(newPos);
                         System.out.println("\n[AudioSphere] Seek forward 10s");
@@ -195,7 +195,7 @@ public final class AudioSpherePlayer {
                         System.out.println("\n[AudioSphere] Stopping playback.");
                     }
                     default -> {
-                        // ignore other keys
+                        // ignore
                     }
                 }
             }
