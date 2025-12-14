@@ -1,0 +1,32 @@
+plugins {
+    id 'application'
+}
+
+group = 'xyz.thedomcraft.audiosphere'
+version = '3.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // No external libs required – using only JDK (crypto, GZIP, javax.sound.sampled)
+}
+
+application {
+    mainClass = 'xyz.thedomcraft.audiosphere.Main'
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass
+        )
+    }
+}
