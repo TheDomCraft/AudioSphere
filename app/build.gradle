@@ -2,7 +2,7 @@ plugins {
     id 'application'
 }
 
-group = 'xyz.thedomcraft.audiosphere'
+group = 'dev.thedomcraft.audiosphere'
 version = '3.0.0'
 
 java {
@@ -20,7 +20,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'xyz.thedomcraft.audiosphere.Main'
+    mainClass = 'dev.thedomcraft.audiosphere.Main'
 }
 
 jar {

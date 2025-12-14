@@ -1,4 +1,4 @@
-package xyz.thedomcraft.audiosphere;
+package dev.thedomcraft.audiosphere;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;

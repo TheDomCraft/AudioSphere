@@ -1,4 +1,4 @@
-package xyz.thedomcraft.audiosphere;
+package dev.thedomcraft.audiosphere;
 
 import javax.sound.sampled.*;
 import java.io.ByteArrayInputStream;

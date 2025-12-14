@@ -1,4 +1,4 @@
-package xyz.thedomcraft.audiosphere;
+package dev.thedomcraft.audiosphere;
 
 import java.io.*;
 import java.nio.ByteBuffer;

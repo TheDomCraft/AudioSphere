@@ -1,4 +1,4 @@
-package xyz.thedomcraft.audiosphere;
+package dev.thedomcraft.audiosphere;
 
 public class Main {
     public static void main(String[] args) {
