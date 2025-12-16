@@ -5,7 +5,7 @@ AudioSphere is a cross‑platform, experimental command‑line tool for working 
 The project is implemented in **Java 21**, targets Linux, macOS, and Windows, and uses only standard Java APIs.  
 It is **experimental**, not designed or reviewed for production use, security‑critical scenarios, or long‑term archival.
 
-For full details of the file format, see the [ASPH v4 Specification](docs/specs.md).
+For full details of the file format, see the [ASPH v4 Specification](https://opensphere.thedomcraft.dev/#/ASPHv4-specs).
 
 ---
 
@@ -53,7 +53,7 @@ In other words, ASPH v4 is essentially **PCM in a small custom container**, comp
 
 For the full binary layout and rules, see:
 
-- [ASPH v4 Specification](docs/specs.md)
+- [ASPH v4 Specification](https://opensphere.thedomcraft.dev/#/ASPHv4-specs)
 
 ---
 
@@ -112,7 +112,6 @@ AudioSphere/
 │           │               ├── MetadataHandler.java   # 512‑byte metadata block
 │           │               └── Utilities.java         # AES+GZip helpers
 │           └── resources/
-├── docs/specs.md           # Formal ASPH v4 format specification
 ├── README.md                 # This file
 ├── settings.gradle
 └── gradle/ + wrapper files
@@ -267,7 +266,7 @@ java -jar app/build/libs/app-4.0.0.jar metadata song.asph "My Title" "My Artist"
   - `int32` LE: album length, then UTF‑8 album bytes,
   - Zero padding for the remainder of 512 bytes.
 
-See [ASPH v4 Specification](docs/specs.md) §6 for the exact layout.
+See [ASPH v4 Specification](https://opensphere.thedomcraft.dev/#/ASPHv4-specs) §6 for the exact layout.
 
 ### 5. Version
 
@@ -283,7 +282,7 @@ java -jar app/build/libs/app-4.0.0.jar version
 
 The exact binary structure of ASPH v4 (headers, fields, ranges, and expected behaviors) is documented in:
 
-- [`docs/specs.md`](docs/specs.md)
+- [`https://opensphere.thedomcraft.dev/#/ASPHv4-specs`](https://opensphere.thedomcraft.dev/#/ASPHv4-specs)
 
 This is the reference document for:
 
@@ -368,7 +367,7 @@ If you need a different JDK version, update this setting and rebuild.
 - **Integrity**:
   - No MAC or AEAD; corrupted payloads may fail with cryptic errors on decrypt/decompress.
 
-For more details and edge cases, see [docs/specs.md](docs/specs.md).
+For more details and edge cases, see [https://opensphere.thedomcraft.dev/#/ASPHv4-specs](https://opensphere.thedomcraft.dev/#/ASPHv4-specs).
 
 ---
 
@@ -381,7 +380,7 @@ Suggestions, bug reports, and pull requests are welcome, especially for:
 - Optional integrity checks (MAC, checksums).
 - Porting ASPH v4 tooling to other languages.
 
-If you plan bigger changes to the format, please reference the [ASPH v4 Specification](docs/specs.md) and propose a version bump or extension strategy.
+If you plan bigger changes to the format, please reference the [ASPH v4 Specification](https://opensphere.thedomcraft.dev/#/ASPHv4-specs) and propose a version bump or extension strategy.
 
 ---
 
